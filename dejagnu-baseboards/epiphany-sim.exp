@@ -47,6 +47,9 @@ set profiling_available_saved 0
 
 set_board_info ldflags "[libgloss_link_flags] [newlib_link_flags] -Wl,--section-start=IVT_RESET=0,--section-start=.init=0x100,-Ttext=0x200,--defsym=__heap_start=0x90000000,--defsym=__heap_end=0x9d000000,--defsym=__stack=0x9ffffff0"
 
+# ldflags for stand-alone asm tests
+set_board_info sim,ldflags "-Ttext=0x0 --defsym=__stack=0x7ff0"
+
 # No linker script for this board.
 #set_board_info ldscript "-T[file dirname [info script]]/../fast.ldf"
 
