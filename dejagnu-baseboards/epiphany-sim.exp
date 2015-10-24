@@ -1,7 +1,5 @@
 ## Simple generic config file for the EPIPHANY.
 
-verbose "enter: ~/boards/epiphany.exp"
-
 # Load the generic configuration for this board. This will define a basic set
 # of routines needed by the tool to communicate with the board.
 load_generic_config "sim"
@@ -14,9 +12,14 @@ load_base_board_description "basic-sim"
 # ... but prefer $pwd/sim/epiphany/run. (in unisrc build). if it exists.
 setup_sim epiphany
 
-# Simulate with lots of memory.
-set_board_info gdb,target_sim_options " --e-coreid 0x808 --e-rows 1 --e-cols 1 --e-ext-ram-size 288"
-set_board_info sim,options            " --e-coreid 0x808 --e-rows 1 --e-cols 1 --e-ext-ram-size 288"
+# Simulate with lots of memory. Use separate regions for stack, heap, and data.
+set gdbandsimoptions "\
+    --e-coreid 0x808 --e-rows 1 --e-cols 1 -eoff --e-ext-ram-size 0 \
+    --memory-region 0x10000000,256MB \
+    --memory-region 0x30000000,32MB \
+    --memory-region 0x40000000,32MB"
+set_board_info gdb,target_sim_options "$gdbandsimoptions"
+set_board_info sim,options "$gdbandsimoptions"
 
 # Not a slow simulator
 set_board_info slow_simulator 0
@@ -42,10 +45,15 @@ set profiling_available_saved 0
 #set_board_info gcc,stack_size 2000
 # OTOH, a small stack size limits coverage, and besides, libstdc++-v3 tests
 # disregard STACK_SIZE; some need more than 128 MB heap.  We should also
-# expect to need up to 1 MB of stack for some tests. That's why the stack is
-# placed in external memory.
-
-set_board_info ldflags "[libgloss_link_flags] [newlib_link_flags] -Wl,--section-start=IVT_RESET=0,--section-start=.init=0x100,-Ttext=0x200,--defsym=__heap_start=0x90000000,--defsym=__heap_end=0x9d000000,--defsym=__stack=0x9ffffff0"
+# expect to need up to 1 MB of stack for some tests.
+# We have above specified that three separate memory regions, plus the cores
+# private memory region which is implicit. Use those regions.
+set_board_info ldflags "\
+    [libgloss_link_flags] [newlib_link_flags] \
+    -Wl,--section-start=IVT_RESET=0,--section-start=RESERVED_CRT0_DATA=0x40 \
+    -Wl,--section-start=RESERVED_CRT0=0x80,--section-start=.init=0x100 \
+    -Wl,-Ttext=0x200,-Tdata=0x30000000,--defsym=__heap_start=0x10000000 \
+    -Wl,--defsym=__heap_end=0x20000000,--defsym=__stack=0x41fffff0"
 
 # ldflags for stand-alone asm tests
 set_board_info sim,ldflags "-Ttext=0x0 --defsym=__stack=0x7ff0"

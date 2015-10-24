@@ -1,3 +1,12 @@
+2015-10-24  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-sim.exp: Remove verbose message.
+	(gdbandsimoption): Update flags. Share flags between gdb and
+	sim.
+	(board_info gdb,target_sim_options): Use gdbandsimoptions.
+	(board_info sim,options): Likewise.
+	(board_info ldflags): Update.
+
 2015-10-05  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-sim.exp (board_info sim,ldflags): Provide ldflags
