@@ -14,7 +14,6 @@ setup_sim epiphany
 
 # Simulate with lots of memory. Use separate regions for stack, heap, and data.
 set gdbandsimoptions "\
-    --e-coreid 0x808 --e-rows 1 --e-cols 1 -eoff --e-ext-ram-size 0 \
     --memory-region 0x10000000,256MB \
     --memory-region 0x30000000,32MB \
     --memory-region 0x40000000,32MB"
