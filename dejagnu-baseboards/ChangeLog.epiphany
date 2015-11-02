@@ -1,3 +1,8 @@
+2015-11-02  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-sim.exp (gdbsimoptions): Give more room for
+	RESERVED_CRT0 so interrupt dispatchers will fit.
+
 2015-10-24  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-sim.exp (gdbsimoptions): Rely on that simulator setting
