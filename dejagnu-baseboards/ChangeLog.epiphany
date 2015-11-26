@@ -1,3 +1,7 @@
+2015-11-26  Ola Jeppsson  <ola@adapteva.com>
+
+	* epiphany-sim.exp (gdbsimoptions): Add --e-external-fetch.
+
 2015-11-02  Ola Jeppsson  <ola@adapteva.com>
 
 	* epiphany-sim.exp (gdbsimoptions): Give more room for

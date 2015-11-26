@@ -16,7 +16,8 @@ setup_sim epiphany
 set gdbandsimoptions "\
     --memory-region 0x10000000,256MB \
     --memory-region 0x30000000,32MB \
-    --memory-region 0x40000000,32MB"
+    --memory-region 0x40000000,32MB \
+    --e-external-fetch"
 set_board_info gdb,target_sim_options "$gdbandsimoptions"
 set_board_info sim,options "$gdbandsimoptions"
 
