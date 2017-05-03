@@ -49,18 +49,20 @@ set profiling_available_saved 0
 # expect to need up to 1 MB of stack for some tests.
 # We have above specified that three separate memory regions, plus the cores
 # private memory region which is implicit. Use those regions.
-set_board_info ldflags "\
-    [libgloss_link_flags] [newlib_link_flags] \
-    -Wl,--section-start=IVT_RESET=0,--section-start=RESERVED_CRT0_DATA=0x40 \
-    -Wl,--section-start=RESERVED_CRT0=0x80,--section-start=.init=0x300 \
-    -Wl,-Ttext=0x400,-Tdata=0x30000000,--defsym=__heap_start=0x10000000 \
-    -Wl,--defsym=__heap_end=0x20000000,--defsym=__stack=0x41fffff0"
+set_board_info ldflags "[libgloss_link_flags] [newlib_link_flags]"
+
+#set_board_info ldflags "\
+#    [libgloss_link_flags] [newlib_link_flags] \
+#    -Wl,--section-start=IVT_RESET=0,--section-start=RESERVED_CRT0_DATA=0x40 \
+#    -Wl,--section-start=RESERVED_CRT0=0x80,--section-start=.init=0x300 \
+#    -Wl,-Ttext=0x400,-Tdata=0x30000000,--defsym=__heap_start=0x10000000 \
+#    -Wl,--defsym=__heap_end=0x20000000,--defsym=__stack=0x41fffff0"
 
 # ldflags for stand-alone asm tests
 set_board_info sim,ldflags "-Ttext=0x0 --defsym=__stack=0x7ff0"
 
 # No linker script for this board.
-#set_board_info ldscript "-T[file dirname [info script]]/../fast.ldf"
+set_board_info ldscript "-T[file dirname [info script]]/sim.ldf"
 
 # set_board_info target "epiphany"
 

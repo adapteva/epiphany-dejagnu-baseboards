@@ -1,0 +1,359 @@
+/*
+  sim.ldf
+
+  Copyright (C) 2012 Adapteva, Inc.
+  Contributed by Yaniv Sapir <yaniv@adapteva.com>
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program, see the file COPYING.  If not, see
+  <http://www.gnu.org/licenses/>.
+*/
+
+
+/* Default linker script, for regular executables */
+OUTPUT_FORMAT("elf32-epiphany", "elf32-epiphany", "elf32-epiphany")
+OUTPUT_ARCH(epiphany)
+ENTRY(_start)
+
+_HEAP_SIZE_      = 256M;
+_DATA_SIZE_      = 32M;
+_STACK_SIZE_     = 32M;
+_SOFTCACHE_SIZE_ = 0x10000;
+
+MEMORY
+{
+	/* run time lib and crt0 */
+	IVT_RAM (WXAI) : ORIGIN = 0, LENGTH = 0x28
+
+	/* user program, continuous placement */
+	WORKGROUP_RAM (WXAI)     : ORIGIN = LENGTH(IVT_RAM), LENGTH = 0x100 - LENGTH(IVT_RAM)
+
+	/* user program, continuous placement */
+	INTERNAL_RAM (WXAI)      : ORIGIN = LENGTH(IVT_RAM) + LENGTH(WORKGROUP_RAM), LENGTH = 1M - LENGTH(IVT_RAM) - LENGTH(WORKGROUP_RAM)
+
+	/* system registers */
+	MMR (WAI) : ORIGIN = 0xF0000, LENGTH = 32K
+
+	/* HEAP */
+	HEAP_RAM : ORIGIN = 0x10000000, LENGTH = _HEAP_SIZE_
+
+	/* DATA */
+	DATA_RAM : ORIGIN = 0x30000000, LENGTH = _DATA_SIZE_
+
+	/* STACK */
+	STACK_RAM : ORIGIN = 0x40000000, LENGTH = _STACK_SIZE_
+}
+
+SECTIONS
+{
+	ivt_reset               0x00 : {*.o(IVT_RESET)}                    > IVT_RAM
+	ivt_software_exception  0x04 : {*.o(ivt_entry_software_exception)} > IVT_RAM
+	ivt_page_miss           0x08 : {*.o(ivt_entry_page_miss)}          > IVT_RAM
+	ivt_timer0              0x0c : {*.o(ivt_entry_timer0)}             > IVT_RAM
+	ivt_timer1              0x10 : {*.o(ivt_entry_timer1)}             > IVT_RAM
+	ivt_message             0x14 : {*.o(ivt_entry_message)}            > IVT_RAM
+	ivt_dma0                0x18 : {*.o(ivt_entry_dma0)}               > IVT_RAM
+	ivt_dma1                0x1c : {*.o(ivt_entry_dma1)}               > IVT_RAM
+	ivt_wand                0x20 : {*.o(ivt_entry_wand)}               > IVT_RAM
+	ivt_user                0x24 : {*.o(ivt_entry_user)}               > IVT_RAM
+
+	/* section filled in by loader */
+	workgroup_cfg           0x28 :
+	  {
+	    *(workgroup_cfg)
+	    ASSERT(. <= 0x28, "workgroup_cfg section overflow");
+	    . = 0x28; /* force allocation */
+	  } > WORKGROUP_RAM /* 28 2c 30 34 38 3c 40 44 48 (4c) */
+
+	/* section filled in by loader */
+	ext_mem_cfg             0x50 :
+	  {
+	    *(ext_mem_cfg);
+	    ASSERT(. <= 0x8, "ext_mem_cfg section overflow");
+	    . = 0x8; /* force allocation */
+	  } > WORKGROUP_RAM /* 50 54 */
+
+	/* section filled in by loader */
+	loader_cfg             0x58 :
+	  {
+	    *(loader_cfg);
+	    ASSERT(. <= 0x10, "loader_cfg section overflow");
+	    . = 0x10; /* force allocation */
+	  } > WORKGROUP_RAM /* 58 5C 60 64 */
+
+
+	/* place the ISR handlers after workgroup-configuration */
+	.reserved_crt0 ORIGIN(IVT_RAM) + LENGTH(IVT_RAM) + LENGTH(WORKGROUP_RAM) : {*.o(RESERVED_CRT0) *.o(reserved_crt0)} > INTERNAL_RAM
+
+	. = ADDR(.reserved_crt0) + SIZEOF(.reserved_crt0);
+
+  /* Read-only sections, merged into text segment: */
+
+  .interp            : { *(.interp) } >INTERNAL_RAM
+  .note.gnu.build-id : { *(.note.gnu.build-id) } >INTERNAL_RAM
+  .hash              : { *(.hash) } >INTERNAL_RAM
+  .gnu.hash          : { *(.gnu.hash) } >INTERNAL_RAM
+  .dynsym            : { *(.dynsym) } >INTERNAL_RAM
+  .dynstr            : { *(.dynstr) } >INTERNAL_RAM
+  .gnu.version       : { *(.gnu.version) } >INTERNAL_RAM
+  .gnu.version_d     : { *(.gnu.version_d) } >INTERNAL_RAM
+  .gnu.version_r     : { *(.gnu.version_r) } >INTERNAL_RAM
+  .rela.init         : { *(.rela.init) } >INTERNAL_RAM
+  .rela.text         : { *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*) } >INTERNAL_RAM
+  .rela.fini         : { *(.rela.fini) } >INTERNAL_RAM
+  .rela.rodata       : { *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*) } >INTERNAL_RAM
+  .rela.data.rel.ro  : { *(.rela.data.rel.ro* .rela.gnu.linkonce.d.rel.ro.*) } >INTERNAL_RAM
+  .rela.data         : { *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*) } >INTERNAL_RAM
+  .rela.tdata        : { *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*) } >INTERNAL_RAM
+  .rela.tbss         : { *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*) } >DATA_RAM
+  .rela.ctors        : { *(.rela.ctors) } >INTERNAL_RAM
+  .rela.dtors        : { *(.rela.dtors) } >INTERNAL_RAM
+  .rela.got          : { *(.rela.got) } >INTERNAL_RAM
+  .rela.sdata        : { *(.rela.sdata .rela.sdata.* .rela.gnu.linkonce.s.*) } >INTERNAL_RAM
+  .rela.sbss         : { *(.rela.sbss .rela.sbss.* .rela.gnu.linkonce.sb.*) } >DATA_RAM
+  .rela.sdata2       : { *(.rela.sdata2 .rela.sdata2.* .rela.gnu.linkonce.s2.*) } >INTERNAL_RAM
+  .rela.sbss2        : { *(.rela.sbss2 .rela.sbss2.* .rela.gnu.linkonce.sb2.*) } >DATA_RAM
+  .rela.bss          : { *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*) } >DATA_RAM
+  .rela.iplt         :
+    {
+      PROVIDE_HIDDEN (__rela_iplt_start = .);
+      *(.rela.iplt)
+      PROVIDE_HIDDEN (__rela_iplt_end = .);
+    }
+  .rela.plt :
+    {
+      *(.rela.plt)
+    } >INTERNAL_RAM
+
+  .init :
+  {
+    KEEP (*(.init))
+  } > INTERNAL_RAM
+
+  .text :
+  {
+    *(.text.unlikely .text.*_unlikely)
+    *(.text.exit .text.exit.*)
+    *(.text.startup .text.startup.*)
+    *(.text.hot .text.hot.*)
+    *(.text .stub .text.* .gnu.linkonce.t.*)
+    /* .gnu.warning sections are handled specially by elf32.em. */
+    *(.gnu.warning)
+  } > INTERNAL_RAM
+  .fini :
+  {
+    KEEP (*(.fini))
+  } > INTERNAL_RAM
+  PROVIDE (__etext = .);
+  PROVIDE (_etext = .);
+  PROVIDE (etext = .);
+  .rodata1        : { *(.rodata1) } >DATA_RAM
+  .sdata2         :
+  {
+    *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
+  } > DATA_RAM
+  .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) } >DATA_RAM
+  .eh_frame_hdr : { *(.eh_frame_hdr) } >INTERNAL_RAM
+  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) } >INTERNAL_RAM
+  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table
+  .gcc_except_table.*) } >INTERNAL_RAM
+  /* These sections are generated by the Sun/Oracle C++ compiler. */
+  .exception_ranges   : ONLY_IF_RO { *(.exception_ranges
+  .exception_ranges*) }> INTERNAL_RAM
+  /* Adjust the address for the data segment.  We want to adjust up to
+     the same address within the page on the next page up.  */
+  . = ALIGN(1) + (. & (1 - 1));
+  /* Exception handling  */
+  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) } >INTERNAL_RAM
+  .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) } >INTERNAL_RAM
+  .exception_ranges   : ONLY_IF_RW { *(.exception_ranges .exception_ranges*) } >INTERNAL_RAM
+  /* Thread Local Storage sections  */
+  .tdata  : { *(.tdata .tdata.* .gnu.linkonce.td.*) } >INTERNAL_RAM
+  .tbss   : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) } >DATA_RAM
+  .preinit_array     :
+  {
+    PROVIDE_HIDDEN (__preinit_array_start = .);
+    KEEP (*(.preinit_array))
+    PROVIDE_HIDDEN (__preinit_array_end = .);
+  }> INTERNAL_RAM
+  .init_array     :
+  {
+    PROVIDE_HIDDEN (__init_array_start = .);
+    KEEP (*(SORT(.init_array.*)))
+    KEEP (*(.init_array))
+    PROVIDE_HIDDEN (__init_array_end = .);
+  }> INTERNAL_RAM
+  .fini_array     :
+  {
+    PROVIDE_HIDDEN (__fini_array_start = .);
+    KEEP (*(SORT(.fini_array.*)))
+    KEEP (*(.fini_array))
+    PROVIDE_HIDDEN (__fini_array_end = .);
+  }> INTERNAL_RAM
+  .ctors          :
+  {
+    /* gcc uses crtbegin.o to find the start of
+       the constructors, so we make sure it is
+       first.  Because this is a wildcard, it
+       doesn't matter if the user does not
+       actually link against crtbegin.o; the
+       linker won't look for a file to match a
+       wildcard.  The wildcard also means that it
+       doesn't matter which directory crtbegin.o
+       is in.  */
+    KEEP (*crtbegin.o(.ctors))
+    KEEP (*crtbegin?.o(.ctors))
+    /* We don't want to include the .ctor section from
+       the crtend.o file until after the sorted ctors.
+       The .ctor section from the crtend file contains the
+       end of ctors marker and it must be last */
+    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .ctors))
+    KEEP (*(SORT(.ctors.*)))
+    KEEP (*(.ctors))
+  }> INTERNAL_RAM
+  .dtors          :
+  {
+    KEEP (*crtbegin.o(.dtors))
+    KEEP (*crtbegin?.o(.dtors))
+    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .dtors))
+    KEEP (*(SORT(.dtors.*)))
+    KEEP (*(.dtors))
+  }> INTERNAL_RAM
+  .jcr            : { KEEP (*(.jcr)) }> INTERNAL_RAM
+  .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro* .gnu.linkonce.d.rel.ro.*) } >INTERNAL_RAM
+  .dynamic        : { *(.dynamic) } >INTERNAL_RAM
+  .data           :
+  {
+    *(.data .data.* .gnu.linkonce.d.*)
+    SORT(CONSTRUCTORS)
+  }> DATA_RAM
+  .data1          : { *(.data1) } >DATA_RAM
+  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) } >DATA_RAM
+  .got            : { *(.got.plt) *(.igot.plt) *(.got) *(.igot) } >DATA_RAM
+  /* We want the small data sections together, so single-instruction offsets
+     can access them all, and initialized data all before uninitialized, so
+     we can shorten the on-disk segment size.  */
+  .sdata          :
+  {
+    *(.sdata .sdata.* .gnu.linkonce.s.*)
+  } > INTERNAL_RAM
+  . = ALIGN(8);
+  _edata = .; PROVIDE (edata = .);
+  __bss_start = .;
+  .sbss           :
+  {
+    *(.dynsbss)
+    *(.sbss .sbss.* .gnu.linkonce.sb.*)
+    *(.scommon)
+  } > DATA_RAM
+
+  /* software caching */
+
+  /* Space for the PLT table. All functions have their own entry in it.  */
+  .plt  : {
+    *(.plt)
+    PROVIDE (_PROCEDURE_LINKAGE_TABLE_END = .);
+  } > INTERNAL_RAM
+
+  /* Here lies the software manager.  */
+  .cacheman	  : {
+    *(.cacheman)
+    PROVIDE (cachespacebot = .);
+  } > INTERNAL_RAM
+
+  /* The software cache needs its own stack which does upwards from here.
+     The memory at __cache_stack should point to the current address of the stack.  */
+  .csp :
+  {
+    PROVIDE (__cache_stack = .);
+  } > INTERNAL_RAM
+
+  /* The software manager needs to keep its own table in cachedata.   */
+  .cachedata : {
+    *(.cachedata)
+    /* After the table, we allocate memory for storing functions.   */
+    . = SIZEOF(.plt) == 0 ? . : . + _SOFTCACHE_SIZE_;
+    PROVIDE (cachespacetop = .);
+  } > INTERNAL_RAM
+  /* end software caching */
+
+  /*. = ALIGN(8); */
+
+  .bss            :
+  {
+   *(.dynbss)
+   *(.bss .bss.* .gnu.linkonce.b.*)
+   *(COMMON)
+   /* Align here to ensure that the .bss section occupies space up to
+      _end.  Align after .bss to ensure correct alignment even if the
+      .bss section disappears because there are no input sections.
+      FIXME: Why do we need it? When there is no .bss section, we don't
+      pad the .data section.  */
+   . = ALIGN(. != 0 ? 8 : 1);
+  }> DATA_RAM
+
+  . = ALIGN(8);
+  _end = .; PROVIDE (end = .);
+
+  /* Stabs debugging sections.  */
+  /* FIXME: We should not need to discard these sections.  */
+  /DISCARD/ 0 : { *(.stab) }
+  /DISCARD/ 0 : { *(.stabstr) }
+  /DISCARD/ 0 : { *(.stab.excl) }
+  /DISCARD/ 0 : { *(.stab.exclstr) }
+  /DISCARD/ 0 : { *(.stab.index) }
+  /DISCARD/ 0 : { *(.stab.indexstr) }
+  /DISCARD/ 0 : { *(.comment) }
+  /* DWARF debug sections.
+     Symbols in the DWARF debugging sections are relative to the beginning
+     of the section so we begin them at 0.  */
+  /* DWARF 1 */
+  .debug          0 : { *(.debug) }
+  .line           0 : { *(.line) }
+  /* GNU DWARF 1 extensions */
+  .debug_srcinfo  0 : { *(.debug_srcinfo) }
+  .debug_sfnames  0 : { *(.debug_sfnames) }
+  /* DWARF 1.1 and DWARF 2 */
+  .debug_aranges  0 : { *(.debug_aranges) }
+  .debug_pubnames 0 : { *(.debug_pubnames) }
+  /* DWARF 2 */
+  .debug_info     0 : { *(.debug_info .gnu.linkonce.wi.*) }
+  .debug_abbrev   0 : { *(.debug_abbrev) }
+  .debug_line     0 : { *(.debug_line) }
+  .debug_frame    0 : { *(.debug_frame) }
+  .debug_str      0 : { *(.debug_str) }
+  .debug_loc      0 : { *(.debug_loc) }
+  .debug_macinfo  0 : { *(.debug_macinfo) }
+  /* SGI/MIPS DWARF 2 extensions */
+  .debug_weaknames 0 : { *(.debug_weaknames) }
+  .debug_funcnames 0 : { *(.debug_funcnames) }
+  .debug_typenames 0 : { *(.debug_typenames) }
+  .debug_varnames  0 : { *(.debug_varnames) }
+  /* DWARF 3 */
+  .debug_pubtypes 0 : { *(.debug_pubtypes) }
+  .debug_ranges   0 : { *(.debug_ranges) }
+  .gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }
+
+  /**/
+  PROVIDE (__stack_start_ = ORIGIN(STACK_RAM) + LENGTH(STACK_RAM) - 0x10);
+  .stack __stack_start_ : { __stack = .; *(.stack) }
+  PROVIDE (___stack = __stack);
+  PROVIDE (__heap_start = ORIGIN(HEAP_RAM));
+  PROVIDE (___heap_start = __heap_start);
+  /*.heap_start __heap_start_ :  { _heap_start_ = .; *(.heap_start) } */
+  PROVIDE (__heap_end   = ORIGIN(HEAP_RAM) + LENGTH(HEAP_RAM));
+  PROVIDE (___heap_end = __heap_end);
+  /* .heap_end __heap_end_ : { _heap_end_ = .; *(.heap_end) } */
+
+  /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
+}
