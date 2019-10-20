@@ -82,3 +82,19 @@ set_board_info noargs 1
 
 # Some gcc tests need more time.
 set_board_info gcc,timeout 700
+
+# Override LTO_OPTIONS for GCC. We don't have a gold backend, which is needed
+# for -fuse-linker-plugin. But the plugin is always built for ELF, and there's
+# no way to disable it, other than disabling LTO completely, which we don't
+# want.
+# See gcc/testsuite/lib/lto.exp
+#global LTO_OPTIONS
+#if ![info exists LTO_OPTIONS] {
+#  set LTO_OPTIONS [list \
+#    {-O0 -flto -flto-partition=none } \
+#    {-O0 -flto -flto-partition=1to1 } \
+#    {-O2 -flto -flto-partition=1to1 } \
+#    {-O0 -flto } \
+#    {-O2 -flto} \
+#  ]
+#}

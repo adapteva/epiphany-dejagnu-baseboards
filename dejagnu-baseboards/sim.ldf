@@ -271,13 +271,6 @@ SECTIONS
     PROVIDE (cachespacebot = .);
   } > INTERNAL_RAM
 
-  /* The software cache needs its own stack which does upwards from here.
-     The memory at __cache_stack should point to the current address of the stack.  */
-  .csp :
-  {
-    PROVIDE (__cache_stack = .);
-  } > INTERNAL_RAM
-
   /* The software manager needs to keep its own table in cachedata.   */
   .cachedata : {
     *(.cachedata)
@@ -286,6 +279,15 @@ SECTIONS
     PROVIDE (cachespacetop = .);
   } > INTERNAL_RAM
   /* end software caching */
+
+  . = ALIGN(8);
+
+  /* The software cache needs its own stack which does upwards from here.
+     The memory at __cache_stack should point to the current address of the stack.  */
+  .csp :
+  {
+    PROVIDE (__cache_stack = .);
+  } > INTERNAL_RAM
 
   /*. = ALIGN(8); */
 
